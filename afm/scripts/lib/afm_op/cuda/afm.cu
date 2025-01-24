@@ -1,8 +1,12 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 
-#include <THC/THC.h>
-#include <THC/THCDeviceUtils.cuh>
+// #include <THC/THC.h>
+// #include <THC/THCDeviceUtils.cuh>
+
+#include <ATen/cuda/CUDAContext.h>
+#include <ATen/cuda/CUDAEvent.h>
+// cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
 #include <vector>
 #include <iostream>
@@ -115,6 +119,8 @@ std::tuple<at::Tensor,at::Tensor> afm_cuda(
     
     // THCudaFree(state, aflabel_dev);
     // THCudaFree(state, afmap_dev);
-    THCudaCheck(cudaGetLastError());
+    // THCudaCheck(cudaGetLastError());
+    AT_CUDA_CHECK(cudaGetLastError());
+
     return std::make_tuple(afmap, aflabel);
 }
