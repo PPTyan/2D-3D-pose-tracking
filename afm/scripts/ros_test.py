@@ -18,6 +18,8 @@ class Nodo(object):
         self.br = CvBridge()
         self.pub_img_set=False 
         self.image_topic=cfg.image_topic
+        self.pub_lines2d=cfg.pub_lines2d
+        self.pub_feature_image=cfg.pub_feature_image
 
         self.system = AFM(cfg)
         self.system.model.eval()
@@ -26,9 +28,9 @@ class Nodo(object):
         self.loop_rate = rospy.Rate(100)
 
         # Publishers
-        self.pub = rospy.Publisher('Lines2d', lines2d, queue_size=1000)
+        self.pub = rospy.Publisher(self.pub_lines2d, lines2d, queue_size=1000)
         if self.pub_img_set:
-            self.pub_image = rospy.Publisher('feature_image', Image, queue_size=1000)
+            self.pub_image = rospy.Publisher(self.pub_feature_image, Image, queue_size=1000)
 
         # Subscribers
         rospy.Subscriber(self.image_topic,Image,self.callback)

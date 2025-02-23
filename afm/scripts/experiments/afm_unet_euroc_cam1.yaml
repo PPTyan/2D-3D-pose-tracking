@@ -11,9 +11,9 @@ SOLVER:
 
 save_dir: "experiments/unet"
 
-image_topic: "/cam0/image_raw"
-pub_lines2d: "Lines2d"
-pub_feature_image: "feature_image"
+image_topic: "/cam1/image_raw"
+pub_lines2d: "Lines2d_cam1"
+pub_feature_image: "feature_image_cam1"
 
 TEST:
   TRANSFORM: True

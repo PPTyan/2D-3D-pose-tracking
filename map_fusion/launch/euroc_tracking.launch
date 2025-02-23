@@ -25,6 +25,15 @@
         <!--<param name="iterations"          value="1.0"/> -->
         <remap from="/cam0/image_raw" to="$(arg image_topic)" /> 
     </node>
+
+    <arg name="image_topic_cam1" default = "/cam1/image_raw" />
+    <node pkg="afm" name="ros_test_cam1" type="ros_test.py" output="screen" cwd="node">
+        <param name="config_file" type="string" value="$(find afm)/scripts/experiments/afm_unet_euroc_cam1.yaml" />
+        <param name="image"   type="string"  value="$(find afm)/scripts/data/EuRoc/images/img_0.jpg"/>
+        <param name="gpu"     value="0" />
+        <!--<param name="iterations"          value="1.0"/> -->
+        <remap from="/cam1/image_raw" to="$(arg image_topic)" /> 
+    </node>
 <!--
     <node pkg="rosbag" type="play" name="player" output="log" 
     args="/home/tony-ws1/bag/ijrr_euroc_mav_dataset/$(arg sequence_name)/$(arg sequence_name).bag -r 2" />

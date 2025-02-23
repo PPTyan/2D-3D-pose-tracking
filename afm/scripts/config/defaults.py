@@ -60,6 +60,8 @@ _C.SOLVER.CHECKPOINT_PERIOD = 10
 _C.save_dir = "."
 
 _C.image_topic = ""
+_C.pub_lines2d = ""
+_C.pub_feature_image = ""
 
 # --------------------------------------------
 # Test configurations
