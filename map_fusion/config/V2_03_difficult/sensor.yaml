@@ -2,7 +2,7 @@
 
 
 image_topic: "/cam0/image_raw"
-output_path: "/home/huai/output/"
+output_path: "/home/yhr/output/"
 #camera calibration 
 model_type: PINHOLE
 camera_name: camera
@@ -60,4 +60,4 @@ per_inliers: 14
 savefile: 0
 threshold: 30
 lamda: 0.1045
-show: 0
+show: 1

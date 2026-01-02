@@ -22,16 +22,15 @@ TEST:
     THRESHOLD: 0.2
 
 distortion_parameters:
-   k1: -2.917e-01
-   k2: 8.228e-02
-   p1: 5.333e-05
-   p2: -1.578e-04
-
+   k1: -2.837e-01
+   k2: 7.451e-02
+   p1: 1.047e-04
+   p2: -3.556e-05
 projection_parameters:
-   fx: 4.616e+02
-   fy: 4.603e+02
-   cx: 3.630e+02
-   cy: 2.481e+02
+   fx: 4.576e+02
+   fy: 4.561e+02
+   cx: 3.800e+02
+   cy: 2.552e+02
    
 width: 752
 height: 480

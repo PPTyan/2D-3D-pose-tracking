@@ -3,7 +3,7 @@
 	<arg name="sequence_name" default = "V1_02_medium" />
     <arg name="cloud_name"  default="$(find map_fusion)/config/$(arg sequence_name)/dataseg.ply"/>
     <arg name="global_pose_name" default="$(find map_fusion)/config/$(arg sequence_name)/data.csv"/>
-    <arg name="config_file" default="$(find map_fusion)/config/$(arg sequence_name)/sensor.yaml" />
+    <arg name="config_file" default="$(find map_fusion)/config/$(arg sequence_name)/sensor_cam1.yaml" />
 
     <node name="tracking_node" pkg="map_fusion" type="window_tracking_node" output="screen">
         <param name="config_file" type="string" value="$(arg config_file)" />

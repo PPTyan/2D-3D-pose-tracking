@@ -2,22 +2,44 @@
 
 
 image_topic: "/cam0/image_raw"
-output_path: "/home/huai/output/"
+output_path: "/home/yhr/output"
 #camera calibration 
 model_type: PINHOLE
 camera_name: camera
 width: 752
 height: 480
+# distortion_parameters:
+#    k1: -2.917e-01
+#    k2: 8.228e-02
+#    p1: 5.333e-05
+#    p2: -1.578e-04
+# projection_parameters:
+#    fx: 4.616e+02
+#    fy: 4.603e+02
+#    cx: 3.630e+02
+#    cy: 2.481e+02
+
 distortion_parameters:
-   k1: -2.917e-01
-   k2: 8.228e-02
-   p1: 5.333e-05
-   p2: -1.578e-04
+   k1: -2.834e-01
+   k2: 7.396e-02
+   p1: 1.936e-04
+   p2: 1.762e-05
 projection_parameters:
-   fx: 4.616e+02
-   fy: 4.603e+02
-   cx: 3.630e+02
-   cy: 2.481e+02
+   fx: 4.587e+02
+   fy: 4.573e+02
+   cx: 3.672e+02
+   cy: 2.484e+02
+
+# distortion_parameters:
+#    k1: -2.955e-01
+#    k2: 8.662e-02
+#    p1: 2.013e-06
+#    p2: 1.392e-05
+# projection_parameters:
+#    fx: 4.612e+02
+#    fy: 4.598e+02
+#    cx: 3.627e+02
+#    cy: 2.485e+02
 
    
 #additional transform for bais
