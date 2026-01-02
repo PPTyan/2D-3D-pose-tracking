@@ -3,7 +3,7 @@
 #include <queue>
 #include <thread>
 #include "estimator.h"
-#define LINE_2D_TOPIC "/Lines2d_cam1"
+#define LINE_2D_TOPIC "/Lines2d"
 
 bool cloud_fusion = true;
 std::string IMAGE_TOPIC;
