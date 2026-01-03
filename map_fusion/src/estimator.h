@@ -49,9 +49,10 @@ class estimator
 public:
 	estimator(){};
 	void setParameters(const string &calib_file, vector<Vector6d> &_lines3d);
-	void processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vio_R, cv::Mat &_image, vector<line2d> &_lines2d);
+	void setParametersCam1(const string &calib_file);
+	void processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vio_R, cv::Mat &_image, vector<line2d> &_lines2d, vector<line2d> &_lines2d_cam1);
 	void loadExtrinsictf(Vector3d &_w2gb_T, Matrix3d &_w2gb_R);
-	vector<line2d> undistortedPoints(vector<line2d> &_lines2d);
+	vector<line2d> undistortedPoints(vector<line2d> &_lines2d, camodocal::CameraPtr _m_camera, Eigen::Matrix3d _K);
 	void showUndistortion(const string &name);
 
 	vector<line3d> updatemaplines_3d(Vector3d &_vio_T, Matrix3d &_vio_R);
@@ -79,17 +80,17 @@ public:
 	Eigen::Matrix3d delta_R[WINDOW_SIZE+1];
 	Eigen::Vector3d w2gb_T;
 	Eigen::Matrix3d w2gb_R;
-	Eigen::Vector3d b2c_T;
-	Eigen::Matrix3d b2c_R;
-	Eigen::Matrix3d K;
+	Eigen::Vector3d b2c_T, b2c_T_cam1;
+	Eigen::Matrix3d b2c_R, b2c_R_cam1;
+	Eigen::Matrix3d K, K_cam1;
 	cv::Mat image[WINDOW_SIZE+1];
 	cv::Mat cv_CMatrix, new_Matrix, cv_dist;
-	camodocal::CameraPtr m_camera;
+	camodocal::CameraPtr m_camera, m_camera_cam1;
 
 	vector<line3d> lines3d[WINDOW_SIZE+1];
-	vector<line2d> lines2d[WINDOW_SIZE+1]; 
-	vector<line2d> undist_lines2d[WINDOW_SIZE+1];
-	vector<pairsmatch> matches2d3d[WINDOW_SIZE+1];
+	vector<line2d> lines2d[WINDOW_SIZE+1], lines2d_cam1[WINDOW_SIZE+1]; 
+	vector<line2d> undist_lines2d[WINDOW_SIZE+1], undist_lines2d_cam1[WINDOW_SIZE+1];
+	vector<pairsmatch> matches2d3d[WINDOW_SIZE+1], matches2d3d_cam1[WINDOW_SIZE+1];
 	vector<Vector6d> lines3d_map;
 
 	int iterations;

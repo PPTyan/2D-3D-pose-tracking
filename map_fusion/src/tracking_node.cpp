@@ -4,6 +4,7 @@
 #include <thread>
 #include "estimator.h"
 #define LINE_2D_TOPIC "/Lines2d"
+#define LINE_2D_CAM1_TOPIC "/Lines2d_cam1"
 
 bool cloud_fusion = true;
 std::string IMAGE_TOPIC;
@@ -14,6 +15,7 @@ Eigen::Vector3d Ori_T;
 queue<nav_msgs::Odometry::ConstPtr> pose_buf;
 queue<sensor_msgs::ImageConstPtr> image_buf;
 queue<afm::lines2d::ConstPtr> afmline_buf;
+queue<afm::lines2d::ConstPtr> afmline_cam1_buf;
 std::mutex m_buf;
 std::mutex m_process;
 
@@ -48,6 +50,21 @@ void readParameters(ros::NodeHandle &n)
     }
 
     Estimator.setParameters(config_file, lines3d_map);
+
+    std::string config_file_cam1;
+    n.getParam("config_file_cam1", config_file_cam1);
+
+    cv::FileStorage fsCam1(config_file_cam1, cv::FileStorage::READ);
+    if (!fsCam1.isOpened())
+    {
+        std::cerr << "ERROR: Wrong path to cam1 settings: " << config_file_cam1 << std::endl;
+    }
+    else
+    {
+        fsCam1.release();
+        Estimator.setParametersCam1(config_file_cam1);
+    }
+
     fsSettings["image_topic"] >> IMAGE_TOPIC;  
     fsSettings["show"]>> show_feat;
     
@@ -80,6 +97,14 @@ void afm_line_callback(const afm::lines2d::ConstPtr &afm_line_msg)
         return;
     m_buf.lock();
     afmline_buf.push(afm_line_msg);
+    m_buf.unlock();
+}
+void afm_line_cam1_callback(const afm::lines2d::ConstPtr &afm_line_msg)
+{
+    if (!cloud_fusion)
+        return;
+    m_buf.lock();
+    afmline_cam1_buf.push(afm_line_msg);
     m_buf.unlock();
 }
 void base_pose_callback(const nav_msgs::OdometryConstPtr &odom_msg)
@@ -204,11 +229,12 @@ void process()
     {
         sensor_msgs::ImageConstPtr image_msg = NULL;
         afm::lines2d::ConstPtr afmline_msg = NULL;
+        afm::lines2d::ConstPtr afmline_cam1_msg = NULL;
         nav_msgs::Odometry::ConstPtr pose_msg = NULL;
         // find out the latest image msg
         m_buf.lock();
 
-        if (!image_buf.empty() &&!afmline_buf.empty() && !pose_buf.empty())
+        if (!image_buf.empty() && !afmline_buf.empty() && !afmline_cam1_buf.empty() && !pose_buf.empty())
         {
             if (image_buf.front()->header.stamp.toSec() > pose_buf.front()->header.stamp.toSec())
             {
@@ -220,8 +246,14 @@ void process()
                 pose_buf.pop();
                 printf("throw pose becuase no line extracted\n");
             }
-            else if (image_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec()&&
-             afmline_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec())
+            else if (afmline_cam1_buf.front()->header.stamp.toSec() > pose_buf.front()->header.stamp.toSec())
+            {
+                pose_buf.pop();
+                printf("throw pose becuase no line extracted for cam1\n");
+            }
+            else if (image_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec() &&
+                     afmline_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec() &&
+                     afmline_cam1_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec())
             {
                 pose_msg = pose_buf.front();
                 pose_buf.pop();
@@ -238,6 +270,11 @@ void process()
                     afmline_buf.pop();
                 afmline_msg = afmline_buf.front();
                 afmline_buf.pop();
+
+                while (afmline_cam1_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec())
+                    afmline_cam1_buf.pop();
+                afmline_cam1_msg = afmline_cam1_buf.front();
+                afmline_cam1_buf.pop();
             }
         }
         m_buf.unlock();
@@ -272,6 +309,14 @@ void process()
                 lines2d.push_back(lnd);
             }
 
+            // read 2d line message for cam1
+            vector<line2d> lines2d_cam1;
+            for (size_t i=0; i<afmline_cam1_msg->startx.size(); i++)
+            {
+                line2d lnd(Eigen::Vector4d(afmline_cam1_msg->startx[i],afmline_cam1_msg->starty[i], afmline_cam1_msg->endx[i], afmline_cam1_msg->endy[i]));
+                lines2d_cam1.push_back(lnd);
+            }
+
             Vector3d vio_T = Vector3d(pose_msg->pose.pose.position.x,
                                   pose_msg->pose.pose.position.y,
                                   pose_msg->pose.pose.position.z);
@@ -280,7 +325,7 @@ void process()
                                      pose_msg->pose.pose.orientation.y,
                                      pose_msg->pose.pose.orientation.z).normalized().toRotationMatrix();
 
-            Estimator.processImage(pose_msg->header.stamp.toSec(), vio_T, vio_R, image, lines2d);
+            Estimator.processImage(pose_msg->header.stamp.toSec(), vio_T, vio_R, image, lines2d, lines2d_cam1);
             pubGodometry(pose_msg->header);
             if (show_feat)
                 pubFeatureimg(pose_msg->header);
@@ -302,7 +347,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_vio = n.subscribe("/vins_estimator/odometry", 1000, vio_callback);
     ros::Subscriber sub_image = n.subscribe(IMAGE_TOPIC, 1000, image_callback);
     ros::Subscriber sub_lineafm = n.subscribe(LINE_2D_TOPIC, 1000, afm_line_callback);
-    // ros::Subscriber sub_lineafm_cam1=n.subscribe("/Lines2d_cam1", 1000, afm_line_cam1_callback);
+    ros::Subscriber sub_lineafm_cam1 = n.subscribe(LINE_2D_CAM1_TOPIC, 1000, afm_line_cam1_callback);
     ros::Subscriber sub_basepose=n.subscribe("/benchmark_publisher/base_pose", 1000, base_pose_callback);
     std::thread joint_process;
     joint_process = std::thread(process);

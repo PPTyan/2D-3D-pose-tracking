@@ -48,6 +48,29 @@ void estimator::setParameters(const string &calib_file, vector<Vector6d> &_lines
 
 	ROS_INFO("Finishing setting params for sliding window...");
 }
+
+void estimator::setParametersCam1(const string &calib_file)
+{
+	cv::FileStorage fsSettings(calib_file, cv::FileStorage::READ);
+	cv::FileNode ns = fsSettings["projection_parameters"];
+	double m_fx = static_cast<double>(ns["fx"]);
+	double m_fy = static_cast<double>(ns["fy"]);
+	double m_cx = static_cast<double>(ns["cx"]);
+	double m_cy = static_cast<double>(ns["cy"]);
+	cv::Mat cv_CMatrix_cam1 = (cv::Mat_<double>(3, 3) << m_fx, 0, m_cx, 0, m_fy, m_cy, 0, 0, 1);
+	cv::cv2eigen(cv_CMatrix_cam1, K_cam1);
+
+	//camera frame to body frame
+	cv::Mat cv_b2c_R, cv_b2c_T;
+	fsSettings["extrinsicRotation"] >> cv_b2c_R;
+	fsSettings["extrinsicTranslation"] >> cv_b2c_T;
+	cv::cv2eigen(cv_b2c_R, b2c_R_cam1);
+	cv::cv2eigen(cv_b2c_T, b2c_T_cam1);
+
+	m_camera_cam1 = CameraFactory::instance()->generateCameraFromYamlFile(calib_file);
+	ROS_INFO("Finishing setting params for cam1...");
+}
+
 // load transformation of 3D map to global body, body to camera tranform.
 void estimator::loadExtrinsictf(Vector3d &_w2gb_T, Matrix3d &_w2gb_R)
 {
@@ -57,7 +80,7 @@ void estimator::loadExtrinsictf(Vector3d &_w2gb_T, Matrix3d &_w2gb_R)
 }
 
 // create estimator online
-void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vio_R, cv::Mat &_image, vector<line2d> &_lines2d)
+void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vio_R, cv::Mat &_image, vector<line2d> &_lines2d, vector<line2d> &_lines2d_cam1)
 {
 	if (frame_count < WINDOW_SIZE)
 		frame_count++;
@@ -66,7 +89,11 @@ void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vi
 	vio_R[frame_count] = _vio_R;
 	image[frame_count]= _image.clone();
 	lines2d[frame_count]= _lines2d;
-	undist_lines2d[frame_count]=undistortedPoints(_lines2d);
+	undist_lines2d[frame_count]=undistortedPoints(_lines2d, m_camera, K);
+	lines2d_cam1[frame_count] = _lines2d_cam1;
+	if (m_camera_cam1)
+		undist_lines2d_cam1[frame_count] = undistortedPoints(_lines2d_cam1, m_camera_cam1, K_cam1);
+
 	if (frame_count > 0)
 		{  //P(n-1)=delta_R*P(n)+delta_T
 			delta_R[frame_count - 1] = vio_R[frame_count-1] * vio_R[frame_count].transpose();
@@ -86,6 +113,12 @@ void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vi
 		Matrix3d tempRot = b2c_R.transpose() * R_w[frame_count].transpose();
 		Vector3d tempTrans = -tempRot * T_w[frame_count] - b2c_R.transpose() * b2c_T;
 		matches2d3d[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d[frame_count], K, tempRot, tempTrans, lamda, threshold);
+		if (m_camera_cam1)
+		{
+			Matrix3d tempRot_cam1 = b2c_R_cam1.transpose() * R_w[frame_count].transpose();
+			Vector3d tempTrans_cam1 = -tempRot_cam1 * T_w[frame_count] - b2c_R_cam1.transpose() * b2c_T_cam1;
+			matches2d3d_cam1[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d_cam1[frame_count], K_cam1, tempRot_cam1, tempTrans_cam1, lamda, threshold);
+		}
 		fuse_pose();
 		if (frame_count == WINDOW_SIZE-1 || WINDOW_SIZE==0)
 		{
@@ -101,6 +134,12 @@ void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vi
 		Matrix3d tempRot = b2c_R.transpose() * R_w[frame_count].transpose();
 		Vector3d tempTrans = -tempRot * T_w[frame_count] - b2c_R.transpose() * b2c_T;
 		matches2d3d[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d[frame_count], K, tempRot, tempTrans, lamda, threshold);
+		if (m_camera_cam1)
+		{
+			Matrix3d tempRot_cam1 = b2c_R_cam1.transpose() * R_w[frame_count].transpose();
+			Vector3d tempTrans_cam1 = -tempRot_cam1 * T_w[frame_count] - b2c_R_cam1.transpose() * b2c_T_cam1;
+			matches2d3d_cam1[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d_cam1[frame_count], K_cam1, tempRot_cam1, tempTrans_cam1, lamda, threshold);
+		}
 		//solve optimization
 		jointoptimization();
 		//slideWindow
@@ -259,19 +298,19 @@ void estimator::showUndistortion(const string &name)
 	cv::waitKey(2);
 }
 
-vector<line2d> estimator::undistortedPoints(vector<line2d> &_lines2d)
+vector<line2d> estimator::undistortedPoints(vector<line2d> &_lines2d, camodocal::CameraPtr _m_camera, Eigen::Matrix3d _K)
 {
 	vector<line2d> _undist_lines2d;
 	for (unsigned int i = 0; i < _lines2d.size(); i++)
 	{
 		line2d kl = _lines2d[i];
 		Eigen::Vector3d b;
-		m_camera->liftProjective(kl.ptstart, b);
-		Eigen::Vector3d pt_start = K * b;
+		_m_camera->liftProjective(kl.ptstart, b);
+		Eigen::Vector3d pt_start = _K * b;
 
 		Eigen::Vector3d d;
-		m_camera->liftProjective(kl.ptend, d);
-		Eigen::Vector3d pt_end = K * d;
+		_m_camera->liftProjective(kl.ptend, d);
+		Eigen::Vector3d pt_end = _K * d;
 		Vector4d l2d(pt_start.x() / pt_start.z(), pt_start.y() / pt_start.z(), pt_end.x() / pt_end.z(), pt_end.y() / pt_end.z());
 		line2d undist_line2d(l2d);
 		_undist_lines2d.push_back(undist_line2d);
@@ -309,6 +348,7 @@ void estimator::jointoptimization()
 			// Vector3d tempTrans = -tempRot * T_w_n - b2c_R.transpose() * b2c_T;
 			// matches2d3d[nframe] = updatecorrespondence(lines3d[nframe], undist_lines2d[nframe], K, tempRot, tempTrans, theta, reject_threshod);
 			Num_matches += matches2d3d[nframe].size();
+			Num_matches += matches2d3d_cam1[nframe].size();
 		}
 		if (save && iter == 0)
 		{
@@ -329,6 +369,7 @@ void estimator::jointoptimization()
 		ceres::LossFunction *loss_func(new ceres::HuberLoss(3.0));
 
 		for (int nframe = frame_count; nframe >=0; nframe--)
+		{
 			for (unsigned int i = 0; i < matches2d3d[nframe].size(); i++)
 			{
 				Vector3d param2d(matches2d3d[nframe][i].line2dt.A / matches2d3d[nframe][i].line2dt.A2B2,
@@ -344,6 +385,23 @@ void estimator::jointoptimization()
 					&(ceres_translation[0]));
 				problem.SetParameterization(&(ceres_rotation[0]), quaternion_parameterization);
 			}
+
+			for (unsigned int i = 0; i < matches2d3d_cam1[nframe].size(); i++)
+			{
+				Vector3d param2d(matches2d3d_cam1[nframe][i].line2dt.A / matches2d3d_cam1[nframe][i].line2dt.A2B2,
+								 matches2d3d_cam1[nframe][i].line2dt.B / matches2d3d_cam1[nframe][i].line2dt.A2B2, matches2d3d_cam1[nframe][i].line2dt.C / matches2d3d_cam1[nframe][i].line2dt.A2B2);
+				ceres::CostFunction *cost_function =
+					RegistrationError::Create(param2d, matches2d3d_cam1[nframe][i].line3dt.ptstart, matches2d3d_cam1[nframe][i].line3dt.ptend, K_cam1,
+											  b2c_R_cam1, b2c_T_cam1, delta_R_n[nframe], delta_T_n[nframe]);
+
+				problem.AddResidualBlock(
+					cost_function,
+					loss_func,
+					&(ceres_rotation[0]), 
+					&(ceres_translation[0]));
+				problem.SetParameterization(&(ceres_rotation[0]), quaternion_parameterization);
+			}
+		}
 
 		ceres::Solver::Options options;
 		options.linear_solver_type = ceres::SPARSE_SCHUR;
@@ -369,6 +427,12 @@ void estimator::jointoptimization()
 		Matrix3d tempRot = b2c_R.transpose() * R_w[frame_count].transpose();
 		Vector3d tempTrans = -tempRot * T_w[frame_count] - b2c_R.transpose() * b2c_T;
 		matches2d3d[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d[frame_count], K, tempRot, tempTrans, theta, reject_threshod);
+		if (m_camera_cam1)
+		{
+			Matrix3d tempRot_cam1 = b2c_R_cam1.transpose() * R_w[frame_count].transpose();
+			Vector3d tempTrans_cam1 = -tempRot_cam1 * T_w[frame_count] - b2c_R_cam1.transpose() * b2c_T_cam1;
+			matches2d3d_cam1[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d_cam1[frame_count], K_cam1, tempRot_cam1, tempTrans_cam1, theta, reject_threshod);
+		}
 
 	}
 	fuse_pose();
@@ -417,8 +481,10 @@ void estimator::slideWindow()
 		//image[i] = image[i+1];
 		//lines2d[i] = lines2d[i+1];
 		undist_lines2d[i] = undist_lines2d[i+1];
+		undist_lines2d_cam1[i] = undist_lines2d_cam1[i+1];
 		lines3d[i] = lines3d[i+1];
 		matches2d3d[i]=matches2d3d[i+1];
+		matches2d3d_cam1[i]=matches2d3d_cam1[i+1];
 	}
 }
 
