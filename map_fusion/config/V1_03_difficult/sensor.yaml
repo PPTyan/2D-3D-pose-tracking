@@ -70,7 +70,7 @@ extrinsicTranslation: !!opencv-matrix
 iterations: 1
 per_inliers: 5
 savefile: 0
-threshold: 35
+threshold: 0.25
 lamda: 0.1745 #0.1745
 show: 1
 

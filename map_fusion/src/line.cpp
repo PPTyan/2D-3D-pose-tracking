@@ -211,10 +211,10 @@ bool rejectoutliers(std::vector<pairsmatch> &matches,
             dist = tfmatch.calcEulerDist(K, lamda);
         }
 
-        //cout << i << "-th dist=" << dist << endl;
-        if (dist.x() <= outlier_threshold)
+        double rel_dist = dist.x() / matches[i].line2dt.length;
+        if (rel_dist <= outlier_threshold)
         {
-            matches[i].distance=dist;
+            matches[i].distance = dist;
             updatematches.push_back(matches[i]);
         }
     }
@@ -252,18 +252,20 @@ std::vector<pairsmatch> updatecorrespondence(std::vector<line3d> &lines_3d,
         {
             pairsmatch tfmatch(i, lines_2d[i], lines_3d[j].transform3D(R, t));
             Vector3d dist = tfmatch.calcEulerDist(K, theta);
-            if (dist.x() < mindist)
+            double rel_dist = dist.x() / lines_2d[i].length;
+            if (rel_dist < mindist)
             {
-                mindist = dist.x();
-                vecdist=dist;
+                mindist = rel_dist;
+                vecdist = dist;
                 index = j;
             }
         }
-        if (mindist<outlier_threshold)
+        if (mindist < outlier_threshold)
         {
             // cout<<i<<"-th line2d is matched with "<<index<<"-th line3d, mindist="<<mindist<<endl;
             pairsmatch match(indx, lines_2d[i], lines_3d[index]);
-            match.distance=vecdist;
+            match.distance = vecdist;
+            // match.distance.x() = mindist; // 将 .x() 存为相对偏差 (dx / length)
             updatemaches.push_back(match);
             indx++;
         }
@@ -275,6 +277,31 @@ std::vector<pairsmatch> updatecorrespondence(std::vector<line3d> &lines_3d,
         if (updatemaches.size() > 40) //only keep former 30 correspondences
             updatemaches.erase(updatemaches.begin() + 40, updatemaches.end());
     }
+
+    if (!updatemaches.empty())
+    {
+        double min_dx = 1e10, max_dx = -1.0, sum_dx = 0.0;
+        double min_rdx = 1e10, max_rdx = -1.0, sum_rdx = 0.0;
+        int count = updatemaches.size();
+
+        for (const auto &match : updatemaches)
+        {
+            double dx = match.distance.x();
+            double rdx = dx / match.line2dt.length;
+
+            if (dx < min_dx) min_dx = dx;
+            if (dx > max_dx) max_dx = dx;
+            sum_dx += dx;
+
+            if (rdx < min_rdx) min_rdx = rdx;
+            if (rdx > max_rdx) max_rdx = rdx;
+            sum_rdx += rdx;
+        }
+        printf("\n[Match Stats] Count: %d\n", count);
+        printf("  dist.x  : min: %.3f, avg: %.3f, max: %.3f\n", min_dx, sum_dx / count, max_dx);
+        printf("  rel_dist: min: %.4f, avg: %.4f, max: %.4f (dist.x / length)\n", min_rdx, sum_rdx / count, max_rdx);
+    }
+
     return updatemaches;
 }
 

@@ -58,6 +58,6 @@ extrinsicTranslation: !!opencv-matrix
 iterations: 1
 per_inliers: 14
 savefile: 0
-threshold: 30
+threshold: 0.25
 lamda: 0.1045
 show: 1

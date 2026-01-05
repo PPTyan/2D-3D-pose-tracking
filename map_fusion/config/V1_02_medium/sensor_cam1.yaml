@@ -8,17 +8,27 @@ model_type: PINHOLE
 camera_name: camera
 width: 752
 height: 480
-distortion_parameters:
-   k1: -2.837e-01
-   k2: 7.451e-02
-   p1: 1.047e-04
-   p2: -3.556e-05
-projection_parameters:
-   fx: 4.576e+02
-   fy: 4.561e+02
-   cx: 3.800e+02
-   cy: 2.552e+02
+# distortion_parameters:
+#    k1: -2.837e-01
+#    k2: 7.451e-02
+#    p1: 1.047e-04
+#    p2: -3.556e-05
+# projection_parameters:
+#    fx: 4.576e+02
+#    fy: 4.561e+02
+#    cx: 3.800e+02
+#    cy: 2.552e+02
 
+distortion_parameters:
+   k1: -2.929e-01
+   k2: 8.480e-02
+   p1: -2.998e-04
+   p2: 3.003e-04
+projection_parameters:
+   fx: 4.601e+02
+   fy: 4.589e+02
+   cx: 3.731e+02
+   cy: 2.544e+02
    
 #additional transform for bais
 initialRotation: !!opencv-matrix
@@ -60,7 +70,7 @@ extrinsicTranslation: !!opencv-matrix
 iterations: 2
 per_inliers: 7
 savefile: 0
-threshold: 30
+threshold: 0.20
 lamda: 0.1745 #0.1745
 show: 1
 

@@ -19,27 +19,27 @@ height: 480
 #    cx: 3.630e+02
 #    cy: 2.481e+02
 
-distortion_parameters:
-   k1: -2.834e-01
-   k2: 7.396e-02
-   p1: 1.936e-04
-   p2: 1.762e-05
-projection_parameters:
-   fx: 4.587e+02
-   fy: 4.573e+02
-   cx: 3.672e+02
-   cy: 2.484e+02
-
 # distortion_parameters:
-#    k1: -2.955e-01
-#    k2: 8.662e-02
-#    p1: 2.013e-06
-#    p2: 1.392e-05
+#    k1: -2.834e-01
+#    k2: 7.396e-02
+#    p1: 1.936e-04
+#    p2: 1.762e-05
 # projection_parameters:
-#    fx: 4.612e+02
-#    fy: 4.598e+02
-#    cx: 3.627e+02
-#    cy: 2.485e+02
+#    fx: 4.587e+02
+#    fy: 4.573e+02
+#    cx: 3.672e+02
+#    cy: 2.484e+02
+
+distortion_parameters:
+   k1: -2.955e-01
+   k2: 8.662e-02
+   p1: 2.013e-06
+   p2: 1.392e-05
+projection_parameters:
+   fx: 4.612e+02
+   fy: 4.598e+02
+   cx: 3.627e+02
+   cy: 2.485e+02
 
    
 #additional transform for bais
@@ -82,7 +82,7 @@ extrinsicTranslation: !!opencv-matrix
 iterations: 2
 per_inliers: 7
 savefile: 0
-threshold: 30
+threshold: 0.20
 lamda: 0.1745 #0.1745
 show: 1
 

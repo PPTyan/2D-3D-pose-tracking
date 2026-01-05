@@ -112,12 +112,16 @@ void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vi
 		lines3d[frame_count] = updatemaplines_3d(_vio_T, _vio_R);
 		Matrix3d tempRot = b2c_R.transpose() * R_w[frame_count].transpose();
 		Vector3d tempTrans = -tempRot * T_w[frame_count] - b2c_R.transpose() * b2c_T;
+		printf("--- Cam0 Initial: updatecorrespondence start ---\n");
 		matches2d3d[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d[frame_count], K, tempRot, tempTrans, lamda, threshold);
+		printf("--- Cam0 Initial: updatecorrespondence end, found %d matches ---\n", (int)matches2d3d[frame_count].size());
 		if (m_camera_cam1)
 		{
 			Matrix3d tempRot_cam1 = b2c_R_cam1.transpose() * R_w[frame_count].transpose();
 			Vector3d tempTrans_cam1 = -tempRot_cam1 * T_w[frame_count] - b2c_R_cam1.transpose() * b2c_T_cam1;
+			printf("--- Cam1 Initial: updatecorrespondence start ---\n");
 			matches2d3d_cam1[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d_cam1[frame_count], K_cam1, tempRot_cam1, tempTrans_cam1, lamda, threshold);
+			printf("--- Cam1 Initial: updatecorrespondence end, found %d matches ---\n", (int)matches2d3d_cam1[frame_count].size());
 		}
 		fuse_pose();
 		if (frame_count == WINDOW_SIZE-1 || WINDOW_SIZE==0)
@@ -133,12 +137,16 @@ void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vi
 		lines3d[frame_count] = updatemaplines_3d(T_w[frame_count], R_w[frame_count]);
 		Matrix3d tempRot = b2c_R.transpose() * R_w[frame_count].transpose();
 		Vector3d tempTrans = -tempRot * T_w[frame_count] - b2c_R.transpose() * b2c_T;
+		printf("--- Cam0 Nonlinear: updatecorrespondence start ---\n");
 		matches2d3d[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d[frame_count], K, tempRot, tempTrans, lamda, threshold);
+		printf("--- Cam0 Nonlinear: updatecorrespondence end, found %d matches ---\n", (int)matches2d3d[frame_count].size());
 		if (m_camera_cam1)
 		{
 			Matrix3d tempRot_cam1 = b2c_R_cam1.transpose() * R_w[frame_count].transpose();
 			Vector3d tempTrans_cam1 = -tempRot_cam1 * T_w[frame_count] - b2c_R_cam1.transpose() * b2c_T_cam1;
+			printf("--- Cam1 Nonlinear: updatecorrespondence start ---\n");
 			matches2d3d_cam1[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d_cam1[frame_count], K_cam1, tempRot_cam1, tempTrans_cam1, lamda, threshold);
+			printf("--- Cam1 Nonlinear: updatecorrespondence end, found %d matches ---\n", (int)matches2d3d_cam1[frame_count].size());
 		}
 		//solve optimization
 		jointoptimization();
@@ -153,7 +161,9 @@ void estimator::processImage(double _time_stamp, Vector3d &_vio_T, Matrix3d &_vi
 		Matrix3d tempRot = b2c_R.transpose() * R_w[frame_count].transpose();
 		Vector3d tempTrans = -tempRot * T_w[frame_count] - b2c_R.transpose() * b2c_T;
 		vector<pairsmatch> match1;
+		printf("--- Cam0 Start: updatecorrespondence start ---\n");
 		match1 = updatecorrespondence(lines3d[frame_count], undist_lines2d[frame_count], K, tempRot, tempTrans, lamda, threshold);
+		printf("--- Cam0 Start: updatecorrespondence end, found %d matches ---\n", (int)match1.size());
 		savelines_2d3d(true);
 		savematches(match1,index,delta_R[frame_count], delta_T[frame_count], false);
 	}
@@ -426,12 +436,16 @@ void estimator::jointoptimization()
 		reject_threshod=0.9*reject_threshod;
 		Matrix3d tempRot = b2c_R.transpose() * R_w[frame_count].transpose();
 		Vector3d tempTrans = -tempRot * T_w[frame_count] - b2c_R.transpose() * b2c_T;
+		printf("--- Cam0 Opt Loop: updatecorrespondence start ---\n");
 		matches2d3d[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d[frame_count], K, tempRot, tempTrans, theta, reject_threshod);
+		printf("--- Cam0 Opt Loop: updatecorrespondence end, found %d matches ---\n", (int)matches2d3d[frame_count].size());
 		if (m_camera_cam1)
 		{
 			Matrix3d tempRot_cam1 = b2c_R_cam1.transpose() * R_w[frame_count].transpose();
 			Vector3d tempTrans_cam1 = -tempRot_cam1 * T_w[frame_count] - b2c_R_cam1.transpose() * b2c_T_cam1;
+			printf("--- Cam1 Opt Loop: updatecorrespondence start ---\n");
 			matches2d3d_cam1[frame_count] = updatecorrespondence(lines3d[frame_count], undist_lines2d_cam1[frame_count], K_cam1, tempRot_cam1, tempTrans_cam1, theta, reject_threshod);
+			printf("--- Cam1 Opt Loop: updatecorrespondence end, found %d matches ---\n", (int)matches2d3d_cam1[frame_count].size());
 		}
 
 	}
